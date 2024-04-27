@@ -1,0 +1,37 @@
+version: '3.7'
+
+services:
+
+  substr_service:
+    build: 
+      context: ../
+      dockerfile: docker/dockerfile
+    image: substr_service
+    restart: unless-stopped
+    expose:
+      - "8000"
+    command: uvicorn app:app --port 8000 --host 0.0.0.0 --proxy-headers
+    deploy: 
+      replicas: 4
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=substr_service_redis
+      - LOG_LEVEL=DEBUG
+
+  redis:
+    container_name: substr_service_redis
+    image: redis:7.2.4-alpine
+    restart: always
+    ports: 
+      - "6379:6379"
+  
+  nginx_proxy:
+    image: nginx:stable-alpine3.19-slim
+    ports: 
+      - 80:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - substr_service
+

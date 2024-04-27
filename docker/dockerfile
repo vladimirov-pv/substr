@@ -1,0 +1,31 @@
+# base
+FROM python:3.10-alpine as base-python
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV POETRY_VERSION=1.8.2
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+ENV POETRY_NO_INTERACTION=true
+ENV POETRY_HOME="/opt/poetry"
+ENV PYSETUP_PATH="/opt/pysetup"
+ENV VENV_PATH="/opt/pysetup/.venv"
+
+ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
+WORKDIR /$PYSETUP_PATH 
+
+# build
+FROM base-python as build-python
+
+RUN apk update && apk add curl bash
+RUN curl -sSL https://install.python-poetry.org | python3 - 
+RUN poetry config virtualenvs.in-project true
+
+COPY pyproject.toml poetry.lock ./
+RUN poetry install --no-dev 
+
+# prod
+FROM base-python as prod-python
+COPY --from=build-python /$PYSETUP_PATH .
+
+COPY substr .
+
